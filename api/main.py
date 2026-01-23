@@ -190,17 +190,27 @@ def root():
 @app.get("/health")
 def health():
     """Health check endpoint."""
+    import os
     response = {
         "status": "healthy" if MODEL_LOADED else "unhealthy",
         "model_loaded": MODEL_LOADED,
         "features_count": len(ALL_FEATURES) if MODEL_LOADED else 0
     }
-    if not MODEL_LOADED and LOAD_ERROR:
+    if not MODEL_LOADED:
         response["error"] = LOAD_ERROR
         response["model_path"] = str(MODEL_PATH)
         response["feature_info_path"] = str(FEATURE_INFO_PATH)
         response["model_path_exists"] = MODEL_PATH.exists()
         response["feature_info_path_exists"] = FEATURE_INFO_PATH.exists()
+        response["current_directory"] = str(Path.cwd())
+        response["app_root"] = str(APP_ROOT)
+        response["api_file_location"] = str(Path(__file__).resolve())
+        # List files in models directory
+        models_dir = APP_ROOT / "models"
+        if models_dir.exists():
+            response["models_directory_files"] = [f.name for f in models_dir.iterdir()]
+        else:
+            response["models_directory_exists"] = False
     return response
 
 @app.post("/recommend_price", response_model=PriceRecommendationResponse)
