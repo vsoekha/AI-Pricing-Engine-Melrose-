@@ -184,7 +184,21 @@ def root():
         "name": "Real Estate AI Price Recommendation API",
         "version": "1.0.0",
         "status": "operational" if MODEL_LOADED else "model_not_loaded",
-        "endpoint": "/recommend_price"
+        "endpoint": "/recommend_price",
+        "method": "POST",
+        "docs": "/docs",
+        "example_request": {
+            "asset_type": "logistics",
+            "city": "Rotterdam",
+            "size_m2": 12000,
+            "quality_score": 0.82,
+            "noi_annual": 620000,
+            "cap_rate_market": 0.065,
+            "interest_rate": 0.025,
+            "liquidity_index": 0.71,
+            "list_price": 9500000,
+            "comp_median_price": 9900000
+        }
     }
 
 @app.get("/health")
