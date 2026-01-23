@@ -48,16 +48,37 @@ sys.modules['__main__'].LightGBMWrapper = LightGBMWrapper
 # Model Loading
 # ============================================================================
 
+model = None
+feature_info = None
+ALL_FEATURES = []
+CATEGORICAL_FEATURES = []
+MODEL_LOADED = False
+LOAD_ERROR = None
+
 try:
-    model = joblib.load(MODEL_PATH)
-    with open(FEATURE_INFO_PATH, "r") as f:
-        feature_info = json.load(f)
-    ALL_FEATURES = feature_info["all_features"]
-    CATEGORICAL_FEATURES = feature_info.get("categorical_features", [])
-    MODEL_LOADED = True
+    # Check if files exist
+    if not MODEL_PATH.exists():
+        LOAD_ERROR = f"Model file not found: {MODEL_PATH}"
+        print(f"ERROR: {LOAD_ERROR}")
+    elif not FEATURE_INFO_PATH.exists():
+        LOAD_ERROR = f"Feature info file not found: {FEATURE_INFO_PATH}"
+        print(f"ERROR: {LOAD_ERROR}")
+    else:
+        print(f"Loading model from: {MODEL_PATH}")
+        print(f"Loading feature info from: {FEATURE_INFO_PATH}")
+        model = joblib.load(MODEL_PATH)
+        with open(FEATURE_INFO_PATH, "r") as f:
+            feature_info = json.load(f)
+        ALL_FEATURES = feature_info["all_features"]
+        CATEGORICAL_FEATURES = feature_info.get("categorical_features", [])
+        MODEL_LOADED = True
+        print(f"Model loaded successfully! Features: {len(ALL_FEATURES)}")
 except Exception as e:
     MODEL_LOADED = False
-    print(f"Warning: Failed to load model: {e}")
+    LOAD_ERROR = str(e)
+    import traceback
+    print(f"ERROR: Failed to load model: {e}")
+    print(traceback.format_exc())
 
 # ============================================================================
 # FastAPI App
@@ -169,11 +190,18 @@ def root():
 @app.get("/health")
 def health():
     """Health check endpoint."""
-    return {
+    response = {
         "status": "healthy" if MODEL_LOADED else "unhealthy",
         "model_loaded": MODEL_LOADED,
         "features_count": len(ALL_FEATURES) if MODEL_LOADED else 0
     }
+    if not MODEL_LOADED and LOAD_ERROR:
+        response["error"] = LOAD_ERROR
+        response["model_path"] = str(MODEL_PATH)
+        response["feature_info_path"] = str(FEATURE_INFO_PATH)
+        response["model_path_exists"] = MODEL_PATH.exists()
+        response["feature_info_path_exists"] = FEATURE_INFO_PATH.exists()
+    return response
 
 @app.post("/recommend_price", response_model=PriceRecommendationResponse)
 def recommend_price(request: PropertyRequest):
