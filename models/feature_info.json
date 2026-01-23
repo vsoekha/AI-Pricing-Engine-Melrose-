@@ -1,0 +1,28 @@
+{
+  "categorical_features": [
+    "asset_type",
+    "city"
+  ],
+  "numeric_features": [
+    "size_m2",
+    "quality_score",
+    "noi_annual",
+    "cap_rate_market",
+    "interest_rate",
+    "liquidity_index",
+    "list_price",
+    "comp_median_price"
+  ],
+  "all_features": [
+    "asset_type",
+    "city",
+    "size_m2",
+    "quality_score",
+    "noi_annual",
+    "cap_rate_market",
+    "interest_rate",
+    "liquidity_index",
+    "list_price",
+    "comp_median_price"
+  ]
+}

@@ -24,9 +24,9 @@ wheels/
 *.egg
 
 # ML specific
-models/
+# models/  # Commented out - models needed for deployment
 *.pkl
-*.joblib
+# *.joblib  # Commented out - model file needed for deployment
 *.h5
 *.ckpt
 *.pt

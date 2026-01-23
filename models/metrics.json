@@ -1,0 +1,12 @@
+{
+  "base_accuracy": 0.0,
+  "base_precision": 0.0,
+  "base_recall": 0.0,
+  "base_f1": 0.0,
+  "base_roc_auc": NaN,
+  "calibrated_accuracy": 0.0,
+  "calibrated_precision": 0.0,
+  "calibrated_recall": 0.0,
+  "calibrated_f1": 0.0,
+  "calibrated_roc_auc": NaN
+}
