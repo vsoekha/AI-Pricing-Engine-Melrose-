@@ -227,6 +227,30 @@ def health():
             response["models_directory_exists"] = False
     return response
 
+@app.get("/recommend_price")
+def recommend_price_info():
+    """GET endpoint - Shows how to use the POST /recommend_price endpoint."""
+    return {
+        "message": "This endpoint requires a POST request with JSON data",
+        "method": "POST",
+        "content_type": "application/json",
+        "example_request": {
+            "asset_type": "logistics",
+            "city": "Rotterdam",
+            "size_m2": 12000,
+            "quality_score": 0.82,
+            "noi_annual": 620000,
+            "cap_rate_market": 0.065,
+            "interest_rate": 0.025,
+            "liquidity_index": 0.71,
+            "list_price": 9500000,
+            "comp_median_price": 9900000
+        },
+        "example_curl": 'curl -X POST "http://localhost:8000/recommend_price" -H "Content-Type: application/json" -d \'{"asset_type": "logistics", "city": "Rotterdam", "size_m2": 12000, "quality_score": 0.82, "noi_annual": 620000, "cap_rate_market": 0.065, "interest_rate": 0.025, "liquidity_index": 0.71, "list_price": 9500000, "comp_median_price": 9900000}\'',
+        "interactive_docs": "/docs",
+        "note": "Visit /docs for an interactive interface to test this endpoint"
+    }
+
 @app.post("/recommend_price", response_model=PriceRecommendationResponse)
 def recommend_price(request: PropertyRequest):
     """
