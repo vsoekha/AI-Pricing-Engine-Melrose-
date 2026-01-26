@@ -9,6 +9,7 @@ import joblib
 import pandas as pd
 import numpy as np
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List
 
@@ -88,6 +89,25 @@ app = FastAPI(
     title="Real Estate AI Price Recommendation API",
     description="AI-powered price optimization for real estate listings",
     version="1.0.0"
+)
+
+# ============================================================================
+# CORS Configuration
+# ============================================================================
+
+# Allow CORS from Base44 and other common frontend domains
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://preview--ai-property-pricer-ba64a598.base44.app",
+        "https://*.base44.app",  # Allow all Base44 preview domains
+        "http://localhost:3000",  # Local development
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:8080",  # Vue dev server
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 # ============================================================================
