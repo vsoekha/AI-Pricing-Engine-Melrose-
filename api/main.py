@@ -96,17 +96,21 @@ app = FastAPI(
 # ============================================================================
 
 # Allow CORS from Base44 and other common frontend domains
+# For production, you can restrict to specific origins
+# For testing, allowing all origins is easier
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://preview--ai-property-pricer-ba64a598.base44.app",
-        "https://*.base44.app",  # Allow all Base44 preview domains
-        "http://localhost:3000",  # Local development
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:8080",  # Vue dev server
-    ],
+    allow_origins=["*"],  # Allow all origins (for testing - restrict in production)
+    # Uncomment below and comment above to restrict to specific domains:
+    # allow_origins=[
+    #     "https://preview--ai-property-pricer-ba64a598.base44.app",
+    #     "https://*.base44.app",
+    #     "http://localhost:3000",
+    #     "http://localhost:5173",
+    #     "http://localhost:8080",
+    # ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allow all headers
 )
 
