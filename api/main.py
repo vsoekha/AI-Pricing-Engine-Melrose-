@@ -131,13 +131,46 @@ class PropertyRequest(BaseModel):
     list_price: float = Field(..., gt=0, description="Current listing price")
     comp_median_price: float = Field(..., gt=0, description="Comparable median price")
 
+class ScenarioAnalysis(BaseModel):
+    """Scenario analysis for different interest rate environments."""
+    scenario_name: str = Field(..., description="Scenario name (base/optimistic/downside/stress)")
+    interest_rate: float = Field(..., description="Interest rate for this scenario")
+    recommended_price: float = Field(..., description="Optimal price in this scenario")
+    sale_probability: float = Field(..., description="Sale probability in this scenario")
+    expected_revenue: float = Field(..., description="Expected revenue (price × probability)")
+    value_impact: float = Field(..., description="Value impact vs base case (%)")
+
 class PriceRecommendationResponse(BaseModel):
-    """AI price recommendation response."""
+    """Comprehensive AI price recommendation response."""
+    # Core pricing
     base_price: float = Field(..., description="Original listing price")
     base_sale_probability: float = Field(..., description="Sale probability at base price")
     recommended_price: float = Field(..., description="AI-recommended optimal price")
     recommended_sale_probability: float = Field(..., description="Sale probability at recommended price")
     expected_uplift: float = Field(..., description="Expected revenue uplift (recommended - base)")
+    
+    # Price sensitivity
+    price_range_up: float = Field(..., description="Maximum viable price increase (%)")
+    price_range_down: float = Field(..., description="Maximum viable price decrease (%)")
+    price_sensitivity: str = Field(..., description="Price sensitivity level (low/medium/high)")
+    
+    # Timing recommendation
+    optimal_timing: str = Field(..., description="Best time to sell (e.g., 'Q1 2026')")
+    timing_reason: str = Field(..., description="Reason for timing recommendation")
+    timing_impact: float = Field(..., description="Expected impact of optimal timing vs now (%)")
+    
+    # Buyer demand
+    buyer_demand_score: float = Field(..., description="Buyer demand score (0-10)")
+    buyer_demand_level: str = Field(..., description="Buyer demand level (low/medium/high)")
+    buyer_profiles: List[str] = Field(..., description="Types of buyers interested (pension funds, PE, etc.)")
+    
+    # Scenario analysis
+    scenarios: List[ScenarioAnalysis] = Field(..., description="Analysis for different interest rate scenarios")
+    
+    # Market insights
+    market_liquidity: str = Field(..., description="Market liquidity assessment")
+    market_trend: str = Field(..., description="Current market trend (bullish/bearish/neutral)")
+    comparable_yield: float = Field(..., description="Comparable yield in market")
 
 # ============================================================================
 # Helper Functions
@@ -326,12 +359,189 @@ def recommend_price(request: PropertyRequest):
         recommended_revenue = best_price * best_prob
         expected_uplift = recommended_revenue - base_revenue
         
+        # ========================================================================
+        # Additional Analytics (Demo - calculated from input data)
+        # ========================================================================
+        
+        # 1. Price Sensitivity Range
+        # Find price range where probability stays above threshold
+        min_prob_threshold = base_prob * 0.8  # 80% of base probability
+        price_range_up = 0.0
+        price_range_down = 0.0
+        
+        # Test upward prices
+        for multiplier in np.arange(1.0, 1.20, 0.01):
+            test_price = base_price * multiplier
+            prob = predict_sale_probability(features, test_price)
+            if prob >= min_prob_threshold:
+                price_range_up = (multiplier - 1.0) * 100
+            else:
+                break
+        
+        # Test downward prices
+        for multiplier in np.arange(1.0, 0.80, -0.01):
+            test_price = base_price * multiplier
+            prob = predict_sale_probability(features, test_price)
+            if prob >= min_prob_threshold:
+                price_range_down = (1.0 - multiplier) * 100
+            else:
+                break
+        
+        # Price sensitivity level
+        total_range = price_range_up + price_range_down
+        if total_range > 20:
+            price_sensitivity = "low"
+        elif total_range > 10:
+            price_sensitivity = "medium"
+        else:
+            price_sensitivity = "high"
+        
+        # 2. Timing Recommendation
+        # Based on interest rate, liquidity, and market conditions
+        current_interest = features["interest_rate"]
+        liquidity = features["liquidity_index"]
+        
+        # Calculate optimal timing (simplified logic for demo)
+        if current_interest < 0.03 and liquidity > 0.7:
+            # Good conditions - recommend sooner
+            optimal_timing = "Q1 2026"
+            timing_reason = "Gunstige marktomstandigheden: lage rente en hoge liquiditeit"
+            timing_impact = 8.5
+        elif current_interest > 0.04 or liquidity < 0.5:
+            # Challenging conditions - recommend waiting
+            optimal_timing = "Q3 2027"
+            timing_reason = "Wachten op betere marktomstandigheden: rente of liquiditeit verbeteren"
+            timing_impact = 11.2
+        else:
+            # Neutral - recommend mid-term
+            optimal_timing = "Q2 2026"
+            timing_reason = "Gebalanceerde marktomstandigheden, optimale timing mid-term"
+            timing_impact = 5.3
+        
+        # 3. Buyer Demand Score (0-10)
+        # Based on asset type, quality, location, and market conditions
+        asset_type_score = {"logistics": 8, "office": 6, "resi": 7}.get(features["asset_type"], 5)
+        quality_score_normalized = features["quality_score"] * 10
+        liquidity_score = features["liquidity_index"] * 10
+        city_score = {"Rotterdam": 8, "Amsterdam": 9, "Utrecht": 7}.get(features["city"], 6)
+        
+        buyer_demand_score = (
+            asset_type_score * 0.3 +
+            quality_score_normalized * 0.2 +
+            liquidity_score * 0.3 +
+            city_score * 0.2
+        )
+        buyer_demand_score = min(10, max(0, buyer_demand_score))
+        
+        if buyer_demand_score >= 7:
+            buyer_demand_level = "high"
+        elif buyer_demand_score >= 4:
+            buyer_demand_level = "medium"
+        else:
+            buyer_demand_level = "low"
+        
+        # Buyer profiles based on asset type
+        buyer_profiles_map = {
+            "logistics": ["Pensioenfondsen", "Institutionele investeerders", "Private equity"],
+            "office": ["Pensioenfondsen", "Family offices", "Internationale investeerders"],
+            "resi": ["Family offices", "Private equity", "HNW individuen"]
+        }
+        buyer_profiles = buyer_profiles_map.get(features["asset_type"], ["Gemengde investeerders"])
+        
+        # 4. Scenario Analysis (different interest rates)
+        scenarios = []
+        scenario_configs = [
+            {"name": "base", "interest": current_interest, "label": "Base Case"},
+            {"name": "optimistic", "interest": max(0.01, current_interest - 0.005), "label": "Optimistic (rente -0.5%)"},
+            {"name": "downside", "interest": current_interest + 0.01, "label": "Downside (rente +1.0%)"},
+            {"name": "stress", "interest": current_interest + 0.015, "label": "Stress Test (rente +1.5%)"}
+        ]
+        
+        base_scenario_revenue = recommended_revenue
+        
+        for scenario in scenario_configs:
+            # Adjust features with new interest rate
+            scenario_features = features.copy()
+            scenario_features["interest_rate"] = scenario["interest"]
+            
+            # Find optimal price for this scenario
+            scenario_best_score = -1
+            scenario_best_price = base_price
+            scenario_best_prob = base_prob
+            
+            for multiplier in np.arange(0.85, 1.16, 0.01):
+                test_price = base_price * multiplier
+                prob = predict_sale_probability(scenario_features, test_price)
+                score = test_price * prob
+                
+                if score > scenario_best_score:
+                    scenario_best_score = score
+                    scenario_best_price = test_price
+                    scenario_best_prob = prob
+            
+            scenario_revenue = scenario_best_price * scenario_best_prob
+            value_impact = ((scenario_revenue - base_scenario_revenue) / base_scenario_revenue) * 100
+            
+            scenarios.append(ScenarioAnalysis(
+                scenario_name=scenario["label"],
+                interest_rate=round(scenario["interest"], 4),
+                recommended_price=round(scenario_best_price, 2),
+                sale_probability=round(scenario_best_prob, 4),
+                expected_revenue=round(scenario_revenue, 2),
+                value_impact=round(value_impact, 2)
+            ))
+        
+        # 5. Market Insights
+        # Market liquidity assessment
+        if liquidity >= 0.7:
+            market_liquidity = "Hoog - Actieve markt met veel kopers"
+        elif liquidity >= 0.5:
+            market_liquidity = "Gemiddeld - Normale marktactiviteit"
+        else:
+            market_liquidity = "Laag - Beperkte marktliquiditeit"
+        
+        # Market trend
+        cap_rate = features["cap_rate_market"]
+        if cap_rate < 0.05 and liquidity > 0.6:
+            market_trend = "Bullish - Sterke vraag, lage cap rates"
+        elif cap_rate > 0.07 or liquidity < 0.4:
+            market_trend = "Bearish - Zwakke vraag, hoge cap rates"
+        else:
+            market_trend = "Neutral - Gebalanceerde markt"
+        
+        # Comparable yield
+        comparable_yield = features["cap_rate_market"]
+        
         return PriceRecommendationResponse(
+            # Core pricing
             base_price=round(base_price, 2),
             base_sale_probability=round(base_prob, 4),
             recommended_price=round(best_price, 2),
             recommended_sale_probability=round(best_prob, 4),
-            expected_uplift=round(expected_uplift, 2)
+            expected_uplift=round(expected_uplift, 2),
+            
+            # Price sensitivity
+            price_range_up=round(price_range_up, 1),
+            price_range_down=round(price_range_down, 1),
+            price_sensitivity=price_sensitivity,
+            
+            # Timing
+            optimal_timing=optimal_timing,
+            timing_reason=timing_reason,
+            timing_impact=round(timing_impact, 1),
+            
+            # Buyer demand
+            buyer_demand_score=round(buyer_demand_score, 1),
+            buyer_demand_level=buyer_demand_level,
+            buyer_profiles=buyer_profiles,
+            
+            # Scenarios
+            scenarios=scenarios,
+            
+            # Market insights
+            market_liquidity=market_liquidity,
+            market_trend=market_trend,
+            comparable_yield=round(comparable_yield, 4)
         )
     
     except Exception as e:
