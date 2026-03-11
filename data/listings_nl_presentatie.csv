@@ -1,0 +1,5 @@
+Asset Type;Stad;Oppervlakte (m²);Kwaliteitsscore;NOI Jaarlijks (€);Cap Rate Markt;Rentestand;Liquiditeitsindex;Vraagprijs (€);Mediaan Prijs Vergelijkbaar (€);Verkocht Binnen 180 Dagen
+Logistiek;Rotterdam;12000;82%;620.000;6.50%;2.50%;71%;9.500.000;9.900.000;Ja
+Kantoor;Amsterdam;5000;60%;310.000;5.50%;3.00%;55%;7.200.000;6.900.000;Nee
+Residentieel;Utrecht;110;75%;42.000;4.00%;2.80%;66%;510.000;495.000;Ja
+Logistiek;Eindhoven;8000;70%;410.000;6.70%;2.70%;60%;7.100.000;7.600.000;Nee
