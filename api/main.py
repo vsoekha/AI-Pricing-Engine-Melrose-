@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Dict, Any, Optional
 
 # ============================================================================
@@ -135,7 +135,16 @@ class PropertyRequest(BaseModel):
     quality_score: float = Field(..., ge=0, le=1, description="Quality score (0-1)")
     noi_annual: float = Field(..., ge=0, description="Net Operating Income (annual)")
     cap_rate_market: float = Field(..., ge=0, le=1, description="Market cap rate (e.g., 0.065)")
-    interest_rate: float = Field(..., ge=0, le=1, description="Interest rate (e.g., 0.025)")
+    interest_rate: float = Field(..., ge=0, le=100, description="Interest rate: decimal (0.025) or percent (2.5)")
+
+    @field_validator("interest_rate", mode="before")
+    @classmethod
+    def normalize_interest_rate(cls, v):
+        """ECB geeft percentage (2.15); API verwacht decimaal (0.0215)."""
+        if isinstance(v, (int, float)) and v > 1:
+            return v / 100.0
+        return v
+
     liquidity_index: float = Field(..., ge=0, le=1, description="Liquidity index (0-1)")
     list_price: float = Field(..., gt=0, description="Current listing price")
     comp_median_price: float = Field(..., gt=0, description="Comparable median price")
@@ -252,12 +261,15 @@ def fetch_ecb_main_refi_rate() -> Optional[Dict[str, Any]]:
             raise RuntimeError("ECB response mist OBS_VALUE kolom")
 
         rate = float(value_str)
+        # ECB geeft percentage (bijv. 2.15). Voor API: rate_decimal = 0.0215
+        rate_decimal = rate / 100.0 if rate > 1 else rate
 
         return {
             "source": "ECB",
             "series_key": ECB_MAIN_REFI_SERIES_KEY,
             "rate": rate,
-            "rate_percent": rate * 100.0,
+            "rate_percent": rate,
+            "rate_decimal": rate_decimal,
             "date": time_str,
             "api_url": url,
         }
@@ -486,10 +498,12 @@ def recommend_price(request: PropertyRequest, gebruik_ecb_rente: bool = False):
         features = request.model_dump()
 
         # Optioneel: gebruik live ECB-rente i.p.v. handmatige invoer
+        # ECB geeft percentage (2.15); ons model verwacht decimaal (0.0215)
         if gebruik_ecb_rente:
             ecb_data = fetch_ecb_main_refi_rate()
             if ecb_data and "rate" in ecb_data:
-                features["interest_rate"] = float(ecb_data["rate"])
+                r = float(ecb_data["rate"])
+                features["interest_rate"] = r / 100.0 if r > 1 else r
         base_price = features["list_price"]
         
         # Calculate base sale probability
